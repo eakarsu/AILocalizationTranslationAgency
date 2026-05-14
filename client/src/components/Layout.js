@@ -45,6 +45,10 @@ const menuItems = [
     { path: '/ai/invoice-analyzer', icon: '\u{1F4B0}', label: 'Invoice Analyzer' },
     { path: '/ai/seo', icon: '\u{1F50D}', label: 'SEO Localization' },
     { path: '/ai/competitor', icon: '\u{1F3C6}', label: 'Competitor Analysis' },
+    { path: '/ai/generate-quote', icon: '\u{1F4B2}', label: 'Quote Generator' },
+  ]},
+  { section: 'History', items: [
+    { path: '/ai-history', icon: '\u{1F4DC}', label: 'AI Call History' },
   ]},
 ];
 

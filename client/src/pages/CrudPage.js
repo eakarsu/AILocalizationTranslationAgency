@@ -8,19 +8,28 @@ export default function CrudPage({ title, endpoint, fields }) {
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
 
-  const fetchItems = useCallback(async () => {
+  const fetchItems = useCallback(async (p = 1) => {
     setLoading(true);
     try {
-      const { data } = await api.get(endpoint);
-      setItems(data);
+      const { data } = await api.get(`${endpoint}?page=${p}&limit=20`);
+      // Handle both paginated { data, pagination } and legacy array responses
+      if (data && data.data && data.pagination) {
+        setItems(data.data);
+        setPagination(data.pagination);
+      } else {
+        setItems(Array.isArray(data) ? data : []);
+        setPagination(null);
+      }
     } catch (err) {
       console.error(err);
     }
     setLoading(false);
   }, [endpoint]);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  useEffect(() => { fetchItems(page); }, [fetchItems, page]);
 
   const openNew = () => {
     setFormData({});
@@ -50,7 +59,7 @@ export default function CrudPage({ title, endpoint, fields }) {
         await api.post(endpoint, formData);
       }
       setShowForm(false);
-      fetchItems();
+      fetchItems(page);
     } catch (err) {
       alert(err.response?.data?.error || 'Error saving');
     }
@@ -61,7 +70,7 @@ export default function CrudPage({ title, endpoint, fields }) {
     try {
       await api.delete(`${endpoint}/${id}`);
       setSelected(null);
-      fetchItems();
+      fetchItems(page);
     } catch (err) {
       alert(err.response?.data?.error || 'Error deleting');
     }
@@ -114,6 +123,29 @@ export default function CrudPage({ title, endpoint, fields }) {
           )}
         </div>
       </div>
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '16px 0' }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => { const p = page - 1; setPage(p); fetchItems(p); }}
+            disabled={page <= 1}
+          >
+            &larr; Prev
+          </button>
+          <span style={{ color: '#64748b', fontSize: 14 }}>
+            Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+          </span>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => { const p = page + 1; setPage(p); fetchItems(p); }}
+            disabled={page >= pagination.totalPages}
+          >
+            Next &rarr;
+          </button>
+        </div>
+      )}
 
       {/* Detail Modal */}
       {selected && (

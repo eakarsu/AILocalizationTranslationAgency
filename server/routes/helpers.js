@@ -4,12 +4,17 @@ const fetch = require('node-fetch');
 function createCrudRouter(tableName, columns) {
   const router = express.Router();
 
-  // GET all
+  // GET all with pagination
   router.get('/', async (req, res) => {
     try {
       const pool = req.app.get('db');
-      const result = await pool.query(`SELECT * FROM ${tableName} ORDER BY id DESC`);
-      res.json(result.rows);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const offset = (page - 1) * limit;
+      const countResult = await pool.query(`SELECT COUNT(*) FROM ${tableName}`);
+      const total = parseInt(countResult.rows[0].count);
+      const result = await pool.query(`SELECT * FROM ${tableName} ORDER BY id DESC LIMIT $1 OFFSET $2`, [limit, offset]);
+      res.json({ data: result.rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -87,7 +92,7 @@ async function callOpenRouter(prompt, systemPrompt) {
       'HTTP-Referer': 'http://localhost:3000',
     },
     body: JSON.stringify({
-      model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5',
+      model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt }
@@ -100,4 +105,13 @@ async function callOpenRouter(prompt, systemPrompt) {
   return data.choices[0].message.content;
 }
 
-module.exports = { createCrudRouter, callOpenRouter };
+function parseAIJson(text) {
+  try { return JSON.parse(text); } catch(e) {}
+  const stripped = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+  try { return JSON.parse(stripped); } catch(e) {}
+  const start = text.indexOf('{'); const end = text.lastIndexOf('}');
+  if (start !== -1 && end !== -1) { try { return JSON.parse(text.slice(start, end + 1)); } catch(e) {} }
+  return null;
+}
+
+module.exports = { createCrudRouter, callOpenRouter, parseAIJson };

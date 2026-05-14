@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CrudPage from './pages/CrudPage';
 import AIPage from './pages/AIPage';
+import AIHistory from './pages/AIHistory';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -70,6 +71,8 @@ function App() {
           <Route path="/ai/order-optimizer" element={<AIPage type="orderOptimizer" />} />
           <Route path="/ai/invoice-analyzer" element={<AIPage type="invoiceAnalyzer" />} />
           <Route path="/ai/bias-check" element={<AIPage type="biasCheck" />} />
+          <Route path="/ai/generate-quote" element={<AIPage type="generateQuote" />} />
+          <Route path="/ai-history" element={<AIHistory />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Layout>

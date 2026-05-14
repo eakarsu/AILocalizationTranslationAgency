@@ -1098,33 +1098,79 @@ const configs = {
     ],
     renderResult: (r) => (
       <>
-        {r.rankedCandidates?.length > 0 && (
+        {/* Top matches from structured DB-enhanced result */}
+        {r.top_matches?.length > 0 && (
+          <div className="ai-result-section">
+            <h4>Top Matches</h4>
+            <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+              {r.top_matches.map((m, i) => (
+                <div key={i} style={{
+                  background: '#1e293b', border: `1px solid ${i === 0 ? '#4ade80' : i === 1 ? '#38bdf8' : '#334155'}`,
+                  borderRadius: 10, padding: '14px 16px'
+                }}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                      <span style={{
+                        background: i === 0 ? '#4ade80' : i === 1 ? '#38bdf8' : '#64748b',
+                        color: '#000', borderRadius: '50%', width: 24, height: 24,
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 700
+                      }}>#{i + 1}</span>
+                      <strong style={{fontSize: 15}}>{m.translator_name}</strong>
+                    </div>
+                    <span style={{
+                      color: m.match_score >= 80 ? '#4ade80' : m.match_score >= 60 ? '#fbbf24' : '#f87171',
+                      fontWeight: 700, fontSize: 18
+                    }}>{m.match_score}%</span>
+                  </div>
+                  {/* Score bar */}
+                  <div style={{background: '#0f172a', borderRadius: 4, height: 8, marginBottom: 10}}>
+                    <div style={{
+                      background: m.match_score >= 80 ? '#4ade80' : m.match_score >= 60 ? '#fbbf24' : '#f87171',
+                      height: '100%', borderRadius: 4,
+                      width: `${m.match_score}%`, transition: 'width 0.3s'
+                    }} />
+                  </div>
+                  {m.reasons?.length > 0 && (
+                    <ul style={{margin: 0, paddingLeft: 16, color: '#94a3b8', fontSize: 13}}>
+                      {m.reasons.map((r, j) => <li key={j}>{r}</li>)}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Legacy rankedCandidates fallback */}
+        {!r.top_matches?.length && r.rankedCandidates?.length > 0 && (
           <div className="ai-result-section">
             <h4>Ranked Candidates</h4>
             {r.rankedCandidates.map((c, i) => (
-              <div key={i} className="issue-card severity-minor" style={{borderLeftColor: i === 0 ? '#4ade80' : i === 1 ? '#38bdf8' : '#94a3b8'}}>
-                <div className="issue-type" style={{color: i === 0 ? '#4ade80' : '#38bdf8'}}>
-                  #{c.rank} - Match Score: {c.matchScore}%
+              <div key={i} style={{
+                background: '#1e293b', border: `1px solid ${i === 0 ? '#4ade80' : '#334155'}`,
+                borderRadius: 10, padding: '14px 16px', marginBottom: 10
+              }}>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 8}}>
+                  <strong style={{fontSize: 15}}>#{c.rank} {c.name}</strong>
+                  <span style={{color: '#4ade80', fontWeight: 700, fontSize: 18}}>{c.matchScore}%</span>
                 </div>
-                <div className="issue-detail">
-                  <strong style={{fontSize: 15}}>{c.name}</strong>
-                  {c.estimatedCost && <span style={{color: '#4ade80'}}> (${c.estimatedCost})</span>}<br/>
-                  {c.strengths?.length > 0 && <span style={{color: '#4ade80'}}>Strengths: {c.strengths.join(', ')}</span>}<br/>
-                  {c.concerns?.length > 0 && <span style={{color: '#fbbf24'}}>Concerns: {c.concerns.join(', ')}</span>}
+                <div style={{background: '#0f172a', borderRadius: 4, height: 8, marginBottom: 10}}>
+                  <div style={{background: '#4ade80', height: '100%', borderRadius: 4, width: `${c.matchScore}%`}} />
                 </div>
+                {c.strengths?.length > 0 && <p style={{color: '#4ade80', fontSize: 13, margin: '4px 0'}}>✓ {c.strengths.join(' · ')}</p>}
+                {c.concerns?.length > 0 && <p style={{color: '#fbbf24', fontSize: 13, margin: '4px 0'}}>⚠ {c.concerns.join(' · ')}</p>}
               </div>
             ))}
           </div>
         )}
-        {r.teamRecommendation && (
+        {(r.recommendation || r.teamRecommendation) && (
           <div className="ai-result-section">
-            <h4>Team Recommendation</h4>
-            <div className="category-scores">
-              {r.teamRecommendation.primary && <div className="category-score"><div className="cat-label">Primary</div><div className="cat-value" style={{fontSize: 14}}>{r.teamRecommendation.primary}</div></div>}
-              {r.teamRecommendation.reviewer && <div className="category-score"><div className="cat-label">Reviewer</div><div className="cat-value" style={{fontSize: 14}}>{r.teamRecommendation.reviewer}</div></div>}
-              {r.teamRecommendation.backup && <div className="category-score"><div className="cat-label">Backup</div><div className="cat-value" style={{fontSize: 14}}>{r.teamRecommendation.backup}</div></div>}
-            </div>
+            <h4>Recommendation</h4>
+            <p style={{lineHeight: 1.7}}>{typeof (r.recommendation || r.teamRecommendation) === 'string' ? (r.recommendation || r.teamRecommendation) : JSON.stringify(r.recommendation || r.teamRecommendation)}</p>
           </div>
+        )}
+        {r.riskFactors?.length > 0 && (
+          <div className="ai-result-section"><h4>Risk Factors</h4><ul>{r.riskFactors.map((f, i) => <li key={i} style={{color: '#fbbf24'}}>{f}</li>)}</ul></div>
         )}
         {r.recommendations?.length > 0 && (
           <div className="ai-result-section"><h4>Recommendations</h4><ul>{r.recommendations.map((rec, i) => <li key={i}>{rec}</li>)}</ul></div>
@@ -1370,12 +1416,71 @@ const configs = {
       </>
     ),
   },
+  generateQuote: {
+    title: 'Project Quote Generator',
+    desc: 'Generate accurate pricing quotes for translation projects using AI',
+    endpoint: '/ai/generate-quote',
+    fields: [
+      { name: 'projectId', label: 'Project ID', type: 'number', required: true },
+    ],
+    renderResult: (r) => (
+      <>
+        <div className="ai-result-section">
+          <h4>Project Cost Summary</h4>
+          <div style={{
+            background: 'rgba(74, 222, 128, 0.1)', border: '1px solid rgba(74, 222, 128, 0.3)',
+            borderRadius: 12, padding: '20px 24px', textAlign: 'center', marginBottom: 16
+          }}>
+            <div style={{fontSize: 13, color: '#94a3b8', marginBottom: 4}}>Total Cost</div>
+            <div style={{fontSize: 40, fontWeight: 800, color: '#4ade80'}}>
+              ${typeof r.total_cost === 'number' ? r.total_cost.toLocaleString() : r.total_cost}
+            </div>
+            {r.payment_terms && <div style={{fontSize: 13, color: '#94a3b8', marginTop: 6}}>{r.payment_terms}</div>}
+          </div>
+        </div>
+        <div className="ai-result-section">
+          <h4>Project Details</h4>
+          <div className="category-scores">
+            {r.total_words !== undefined && <div className="category-score"><div className="cat-label">Total Words</div><div className="cat-value">{Number(r.total_words).toLocaleString()}</div></div>}
+            {r.estimated_hours !== undefined && <div className="category-score"><div className="cat-label">Est. Hours</div><div className="cat-value">{r.estimated_hours}</div></div>}
+            {r.base_rate_per_word !== undefined && <div className="category-score"><div className="cat-label">Rate/Word</div><div className="cat-value">${r.base_rate_per_word}</div></div>}
+          </div>
+        </div>
+        {r.delivery_date_estimate && (
+          <div className="ai-result-section">
+            <h4>Delivery Estimate</h4>
+            <p style={{fontSize: 20, fontWeight: 700, color: '#38bdf8'}}>{r.delivery_date_estimate}</p>
+          </div>
+        )}
+        {r.translator_recommendation && (
+          <div className="ai-result-section">
+            <h4>Translator Recommendation</h4>
+            <p>{r.translator_recommendation}</p>
+          </div>
+        )}
+        {r.breakdown && (
+          <div className="ai-result-section">
+            <h4>Cost Breakdown</h4>
+            <div className="category-scores">
+              {Object.entries(r.breakdown).map(([k, v]) => (
+                <div key={k} className="category-score">
+                  <div className="cat-label" style={{textTransform: 'capitalize'}}>{k}</div>
+                  <div className="cat-value">${typeof v === 'number' ? v.toLocaleString() : v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </>
+    ),
+  },
 };
 
 export default function AIPage({ type }) {
   const config = configs[type];
   const [formData, setFormData] = useState({});
   const [result, setResult] = useState(null);
+  const [resultMeta, setResultMeta] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [dropdownData, setDropdownData] = useState({});
@@ -1421,6 +1526,7 @@ export default function AIPage({ type }) {
     fetchDropdowns();
     setFormData({});
     setResult(null);
+    setResultMeta({});
     setError('');
     setActiveSample(null);
   }, [type, fetchDropdowns]);
@@ -1443,6 +1549,7 @@ export default function AIPage({ type }) {
     try {
       const { data } = await api.post(config.endpoint, formData);
       setResult(data.result);
+      setResultMeta({ glossaryApplied: data.glossaryApplied });
     } catch (err) {
       setError(err.response?.data?.error || 'AI request failed. Check your OpenRouter API key.');
     }
@@ -1560,7 +1667,18 @@ export default function AIPage({ type }) {
 
       {result && !loading && (
         <div className="ai-result">
-          <h3>AI Analysis Results</h3>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+            <h3 style={{margin: 0}}>AI Analysis Results</h3>
+            {resultMeta.glossaryApplied && (
+              <span style={{
+                background: 'rgba(99, 102, 241, 0.2)', color: '#818cf8',
+                border: '1px solid rgba(99, 102, 241, 0.4)',
+                borderRadius: 12, padding: '3px 10px', fontSize: 12, fontWeight: 600
+              }}>
+                📚 Glossary terms applied
+              </span>
+            )}
+          </div>
           {config.renderResult(result)}
         </div>
       )}
