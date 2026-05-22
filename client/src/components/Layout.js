@@ -47,6 +47,16 @@ const menuItems = [
     { path: '/ai/competitor', icon: '\u{1F3C6}', label: 'Competitor Analysis' },
     { path: '/ai/generate-quote', icon: '\u{1F4B2}', label: 'Quote Generator' },
   ]},
+  { section: 'Interpretation', collapsible: true, items: [
+    { path: '/interp/streaming-asr', icon: '\u{1F3A4}', label: 'Streaming ASR' },
+    { path: '/interp/streaming-mt', icon: '\u{1F310}', label: 'Streaming MT' },
+    { path: '/interp/streaming-tts', icon: '\u{1F50A}', label: 'Streaming TTS' },
+    { path: '/interp/medical-glossary-pack', icon: '\u{1FA7A}', label: 'Medical Glossary' },
+    { path: '/interp/legal-glossary-pack', icon: '⚖', label: 'Legal Glossary' },
+    { path: '/interp/dialect-adaptation', icon: '\u{1F5E3}', label: 'Dialect Adaptation' },
+    { path: '/interp/speaker-diarization', icon: '\u{1F465}', label: 'Speaker Diarization' },
+    { path: '/interp/compliance-logging', icon: '\u{1F6E1}', label: 'Compliance Logging' },
+  ]},
   { section: 'History', items: [
     { path: '/ai-history', icon: '\u{1F4DC}', label: 'AI Call History' },
   ]},

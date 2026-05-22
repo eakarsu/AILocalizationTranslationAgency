@@ -79,6 +79,7 @@ app.use('/api/ai/bias-check', aiRateLimiter, require('./routes/ai-bias-check'));
 app.use('/api/ai/invoice-analyzer', aiRateLimiter, require('./routes/ai-invoice-analyzer'));
 app.use('/api/ai/generate-quote', aiRateLimiter, require('./routes/ai-generate-quote'));
 app.use('/api/ai-results', require('./routes/ai-results'));
+app.use('/api/terminology-drift-qa', require('./routes/terminologyDriftQa'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -107,3 +108,23 @@ try { const _gap_translator = require('./routes/gap-translator'); app.use('/api/
 try { const _gap_limited = require('./routes/gap-limited'); app.use('/api/gap-limited', _gap_limited); } catch(e) { console.error('gap mount fail limited:', e.message); }
 try { const _gap_webhooks = require('./routes/gap-webhooks'); app.use('/api/gap-webhooks', _gap_webhooks); } catch(e) { console.error('gap mount fail webhooks:', e.message); }
 // === End Batch 05 Mounts ===
+
+// === Real-Time Interpretation Feature Mounts ===
+try { app.use('/api/interp/streaming-asr', require('./routes/interpFeat_streamingAsr')); } catch(e) { console.error('interp mount fail streaming-asr:', e.message); }
+try { app.use('/api/interp/streaming-mt', require('./routes/interpFeat_streamingMt')); } catch(e) { console.error('interp mount fail streaming-mt:', e.message); }
+try { app.use('/api/interp/streaming-tts', require('./routes/interpFeat_streamingTts')); } catch(e) { console.error('interp mount fail streaming-tts:', e.message); }
+try { app.use('/api/interp/medical-glossary-pack', require('./routes/interpFeat_medicalGlossaryPack')); } catch(e) { console.error('interp mount fail medical-glossary-pack:', e.message); }
+try { app.use('/api/interp/legal-glossary-pack', require('./routes/interpFeat_legalGlossaryPack')); } catch(e) { console.error('interp mount fail legal-glossary-pack:', e.message); }
+try { app.use('/api/interp/dialect-adaptation', require('./routes/interpFeat_dialectAdaptation')); } catch(e) { console.error('interp mount fail dialect-adaptation:', e.message); }
+try { app.use('/api/interp/speaker-diarization', require('./routes/interpFeat_speakerDiarization')); } catch(e) { console.error('interp mount fail speaker-diarization:', e.message); }
+try { app.use('/api/interp/compliance-logging', require('./routes/interpFeat_complianceLogging')); } catch(e) { console.error('interp mount fail compliance-logging:', e.message); }
+// === End Real-Time Interpretation Mounts ===
+
+// Serve client build (when available) so single port hosts UI + API
+const path = require('path');
+const fs = require('fs');
+const _buildDir = path.join(__dirname, '..', 'client', 'build');
+if (fs.existsSync(_buildDir)) {
+  app.use(express.static(_buildDir));
+  app.get(/^\/(?!api).*/, (req, res) => res.sendFile(path.join(_buildDir, 'index.html')));
+}

@@ -8,6 +8,21 @@ import AIHistory from './pages/AIHistory';
 import Layout from './components/Layout';
 import './App.css';
 
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+
+import TimelineView from './pages/TimelineView';
+
+import InterpStreamingAsr from './pages/InterpStreamingAsr';
+import InterpStreamingMt from './pages/InterpStreamingMt';
+import InterpStreamingTts from './pages/InterpStreamingTts';
+import InterpMedicalGlossaryPack from './pages/InterpMedicalGlossaryPack';
+import InterpLegalGlossaryPack from './pages/InterpLegalGlossaryPack';
+import InterpDialectAdaptation from './pages/InterpDialectAdaptation';
+import InterpSpeakerDiarization from './pages/InterpSpeakerDiarization';
+import InterpComplianceLogging from './pages/InterpComplianceLogging';
+import TerminologyDriftQa from './pages/TerminologyDriftQa';
+
 function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -37,6 +52,10 @@ function App() {
     <Router>
       <Layout user={user} onLogout={handleLogout}>
         <Routes>
+        <Route path="/insights/timeline" element={<TimelineView />} />
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<CrudPage title="Projects" endpoint="/projects" fields={projectFields} />} />
           <Route path="/clients" element={<CrudPage title="Clients" endpoint="/clients" fields={clientFields} />} />
@@ -73,6 +92,15 @@ function App() {
           <Route path="/ai/bias-check" element={<AIPage type="biasCheck" />} />
           <Route path="/ai/generate-quote" element={<AIPage type="generateQuote" />} />
           <Route path="/ai-history" element={<AIHistory />} />
+          <Route path="/interp/streaming-asr" element={<InterpStreamingAsr />} />
+          <Route path="/interp/streaming-mt" element={<InterpStreamingMt />} />
+          <Route path="/interp/streaming-tts" element={<InterpStreamingTts />} />
+          <Route path="/interp/medical-glossary-pack" element={<InterpMedicalGlossaryPack />} />
+          <Route path="/interp/legal-glossary-pack" element={<InterpLegalGlossaryPack />} />
+          <Route path="/interp/dialect-adaptation" element={<InterpDialectAdaptation />} />
+          <Route path="/interp/speaker-diarization" element={<InterpSpeakerDiarization />} />
+          <Route path="/interp/compliance-logging" element={<InterpComplianceLogging />} />
+          <Route path="/terminology-drift-qa" element={<TerminologyDriftQa />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Layout>
