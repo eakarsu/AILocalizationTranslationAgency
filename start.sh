@@ -1,93 +1,36 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "============================================"
-echo "  AI Localization & Translation Agency"
-echo "  Starting Application..."
-echo "============================================"
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BACKEND_PORT="${BACKEND_PORT:-3001}"
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
+CHILD_PIDS=()
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-# Kill processes on ports 3000, 3001
-echo -e "${YELLOW}Cleaning up used ports...${NC}"
-for port in 3000 3001; do
-  pid=$(lsof -ti:$port 2>/dev/null)
-  if [ -n "$pid" ]; then
-    echo -e "${RED}Killing process on port $port (PID: $pid)${NC}"
-    kill -9 $pid 2>/dev/null
-  fi
-done
-sleep 1
-
-# Check PostgreSQL
-echo -e "${BLUE}Checking PostgreSQL...${NC}"
-if ! command -v psql &> /dev/null; then
-  echo -e "${RED}PostgreSQL is not installed. Please install it first.${NC}"
-  exit 1
-fi
-
-# Check if PostgreSQL is running
-if ! pg_isready -q 2>/dev/null; then
-  echo -e "${YELLOW}Starting PostgreSQL...${NC}"
-  brew services start postgresql@14 2>/dev/null || brew services start postgresql 2>/dev/null || {
-    echo -e "${RED}Could not start PostgreSQL. Please start it manually.${NC}"
+require_file() { [ -f "$1" ] || { echo "Missing required file: $1" >&2; exit 1; }; }
+require_dir() { [ -d "$1" ] || { echo "Missing dependencies: $1 (install explicitly before startup)" >&2; exit 1; }; }
+port_free() {
+  if command -v lsof >/dev/null 2>&1 && lsof -ti ":$1" >/dev/null 2>&1; then
+    echo "Port $1 is already in use; refusing to terminate another process." >&2
     exit 1
-  }
-  sleep 2
-fi
+  fi
+}
+cleanup() {
+  for pid in "${CHILD_PIDS[@]:-}"; do
+    [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+  done
+}
+trap cleanup INT TERM EXIT
 
-# Create database if not exists
-echo -e "${BLUE}Setting up database...${NC}"
-psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'ai_localization_agency'" 2>/dev/null | grep -q 1 || \
-  createdb -U postgres ai_localization_agency 2>/dev/null || \
-  psql -tc "SELECT 1 FROM pg_database WHERE datname = 'ai_localization_agency'" 2>/dev/null | grep -q 1 || \
-  createdb ai_localization_agency 2>/dev/null
+require_file "$PROJECT_DIR/.env"
+require_dir "$PROJECT_DIR/server/node_modules"
+require_dir "$PROJECT_DIR/client/node_modules"
+port_free "$BACKEND_PORT"
+port_free "$FRONTEND_PORT"
 
-# Install dependencies
-echo -e "${BLUE}Installing server dependencies...${NC}"
-cd server && npm install --silent 2>&1 | tail -1
-echo -e "${BLUE}Installing client dependencies...${NC}"
-cd ../client && npm install --silent 2>&1 | tail -1
-cd ..
+(cd "$PROJECT_DIR/server" && PORT="$BACKEND_PORT" node index.js) &
+CHILD_PIDS+=("$!")
+(cd "$PROJECT_DIR/client" && PORT="$FRONTEND_PORT" BROWSER=none npm start) &
+CHILD_PIDS+=("$!")
 
-# Seed database
-echo -e "${GREEN}Seeding database...${NC}"
-cd server/seeds && node seed.js
-cd ../..
-
-# Start server with nodemon (auto-reload)
-echo -e "${GREEN}Starting backend server on port 3001...${NC}"
-cd server && npx nodemon index.js &
-SERVER_PID=$!
-cd ..
-
-# Wait for server to be ready
-sleep 3
-
-# Start client with hot reload
-echo -e "${GREEN}Starting frontend on port 3000...${NC}"
-cd client && BROWSER=none npm start &
-CLIENT_PID=$!
-cd ..
-
-echo ""
-echo -e "${GREEN}============================================${NC}"
-echo -e "${GREEN}  Application is starting up!${NC}"
-echo -e "${GREEN}============================================${NC}"
-echo -e "${BLUE}  Frontend:  http://localhost:3000${NC}"
-echo -e "${BLUE}  Backend:   http://localhost:3001${NC}"
-echo -e "${YELLOW}  Login:     admin@agency.com / password123${NC}"
-echo -e "${GREEN}============================================${NC}"
-echo ""
-echo -e "${YELLOW}Both servers support hot-reload.${NC}"
-echo -e "${YELLOW}Press Ctrl+C to stop all services.${NC}"
-
-# Trap to clean up on exit
-trap "echo -e '\n${RED}Shutting down...${NC}'; kill $SERVER_PID $CLIENT_PID 2>/dev/null; exit 0" SIGINT SIGTERM
-
-# Wait for processes
-wait
+echo "Localization services started without installing, seeding, migrating, or reclaiming ports."
+wait "${CHILD_PIDS[@]}"

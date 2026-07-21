@@ -3,13 +3,20 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const { Pool } = require('pg');
+const { validateRuntime } = require('./governance/runtime');
+const buildGovernanceRouter = require('./governance/router');
+const { createProviderGate } = require('./governance/providerGate');
+
+validateRuntime();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
+const allowedOrigins = String(process.env.CORS_ORIGINS || process.env.CLIENT_URL || 'http://localhost:3000').split(',').map((value) => value.trim()).filter(Boolean);
+app.use(cors({ origin:(origin,callback)=>!origin||allowedOrigins.includes(origin)?callback(null,true):callback(new Error('Origin not allowed by CORS')),credentials:true }));
 app.use(express.json({ limit: '10mb' }));
+app.use(createProviderGate(['/api/ai','/api/interp','/api/translator-matcher','/api/qa-stream','/api/multi-modal-pipeline','/api/brand-voice-enforcer','/api/vertical-tm-manager']));
 
 // Database pool
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -18,7 +25,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 app.set('db', pool);
 
 // Create ai_results table on startup
-pool.query(`
+if (process.env.ENABLE_LEGACY_SCHEMA_BOOTSTRAP === 'true') pool.query(`
   CREATE TABLE IF NOT EXISTS ai_results (
     id SERIAL PRIMARY KEY,
     user_id INTEGER,
@@ -80,6 +87,7 @@ app.use('/api/ai/invoice-analyzer', aiRateLimiter, require('./routes/ai-invoice-
 app.use('/api/ai/generate-quote', aiRateLimiter, require('./routes/ai-generate-quote'));
 app.use('/api/ai-results', require('./routes/ai-results'));
 app.use('/api/terminology-drift-qa', require('./routes/terminologyDriftQa'));
+app.use('/api/governed-localization-deliveries', buildGovernanceRouter(pool));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -95,19 +103,7 @@ app.use('/api/multi-modal-pipeline', require('./routes/multi-modal-pipeline'));
 app.use('/api/brand-voice-enforcer', require('./routes/brand-voice-enforcer'));
 app.use('/api/vertical-tm-manager', require('./routes/vertical-tm-manager'));
 
-// === Batch 05 Gaps & Frontend Mounts ===
-try { const _gap_ai_realtime_tm_leverage = require('./routes/gap-ai-realtime-tm-leverage'); app.use('/api/gap-ai-realtime-tm-leverage', _gap_ai_realtime_tm_leverage); } catch(e) { console.error('gap mount fail ai-realtime-tm-leverage:', e.message); }
-try { const _gap_ai_post_edit_effort_predictor = require('./routes/gap-ai-post-edit-effort-predictor'); app.use('/api/gap-ai-post-edit-effort-predictor', _gap_ai_post_edit_effort_predictor); } catch(e) { console.error('gap mount fail ai-post-edit-effort-predictor:', e.message); }
-try { const _gap_ai_dialect_variant_detection = require('./routes/gap-ai-dialect-variant-detection'); app.use('/api/gap-ai-dialect-variant-detection', _gap_ai_dialect_variant_detection); } catch(e) { console.error('gap mount fail ai-dialect-variant-detection:', e.message); }
-try { const _gap_ai_regulatory_compliance = require('./routes/gap-ai-regulatory-compliance'); app.use('/api/gap-ai-regulatory-compliance', _gap_ai_regulatory_compliance); } catch(e) { console.error('gap mount fail ai-regulatory-compliance:', e.message); }
-try { const _gap_tm = require('./routes/gap-tm'); app.use('/api/gap-tm', _gap_tm); } catch(e) { console.error('gap mount fail tm:', e.message); }
-try { const _gap_multi_pass = require('./routes/gap-multi-pass'); app.use('/api/gap-multi-pass', _gap_multi_pass); } catch(e) { console.error('gap mount fail multi-pass:', e.message); }
-try { const _gap_dtp = require('./routes/gap-dtp'); app.use('/api/gap-dtp', _gap_dtp); } catch(e) { console.error('gap mount fail dtp:', e.message); }
-try { const _gap_in_context = require('./routes/gap-in-context'); app.use('/api/gap-in-context', _gap_in_context); } catch(e) { console.error('gap mount fail in-context:', e.message); }
-try { const _gap_translator = require('./routes/gap-translator'); app.use('/api/gap-translator', _gap_translator); } catch(e) { console.error('gap mount fail translator:', e.message); }
-try { const _gap_limited = require('./routes/gap-limited'); app.use('/api/gap-limited', _gap_limited); } catch(e) { console.error('gap mount fail limited:', e.message); }
-try { const _gap_webhooks = require('./routes/gap-webhooks'); app.use('/api/gap-webhooks', _gap_webhooks); } catch(e) { console.error('gap mount fail webhooks:', e.message); }
-// === End Batch 05 Mounts ===
+// Generated gap routes are quarantined: no mounts until durable provider contracts and acceptance tests exist.
 
 // === Real-Time Interpretation Feature Mounts ===
 try { app.use('/api/interp/streaming-asr', require('./routes/interpFeat_streamingAsr')); } catch(e) { console.error('interp mount fail streaming-asr:', e.message); }
