@@ -2,6 +2,7 @@ require('dotenv').config({ path: '../.env' });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const { validateRuntime } = require('./governance/runtime');
 const buildGovernanceRouter = require('./governance/router');
@@ -24,17 +25,37 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 // Make pool available to routes
 app.set('db', pool);
 
-// Create ai_results table on startup
-if (process.env.ENABLE_LEGACY_SCHEMA_BOOTSTRAP === 'true') pool.query(`
-  CREATE TABLE IF NOT EXISTS ai_results (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER,
-    endpoint VARCHAR(100),
-    input_data JSONB,
-    result JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
-  )
-`).catch(err => console.error('Error creating ai_results table:', err.message));
+async function initializeRuntime() {
+  if (process.env.MIGRATE_ON_START !== 'true') return;
+  const email = process.env.PROVISION_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
+  const password = process.env.PROVISION_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+  if (!email || !password) throw new Error('Runtime admin credentials are required');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      role VARCHAR(50) DEFAULT 'admin',
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS ai_results (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      endpoint VARCHAR(100),
+      input_data JSONB,
+      result JSONB,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  const passwordHash = await bcrypt.hash(password, 10);
+  await pool.query(
+    `INSERT INTO users (name, email, password_hash, role)
+     VALUES ($1, $2, $3, 'admin')
+     ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash, role = EXCLUDED.role`,
+    [process.env.PROVISION_ADMIN_NAME || 'Runtime Administrator', email, passwordHash]
+  );
+}
 
 const authMiddleware = require('./middleware/auth');
 const { aiRateLimiter } = require('./middleware/rateLimiter');
@@ -92,9 +113,12 @@ app.use('/api/governed-localization-deliveries', buildGovernanceRouter(pool));
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+initializeRuntime()
+  .then(() => app.listen(PORT, () => console.log(`Server running on port ${PORT}`)))
+  .catch((error) => {
+    console.error('Runtime initialization failed:', error.message);
+    process.exit(1);
+  });
 
 // === BATCH 05 AUTO-MOUNT (custom feature suggestions) ===
 app.use('/api/translator-matcher', require('./routes/translator-matcher'));

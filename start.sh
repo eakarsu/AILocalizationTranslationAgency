@@ -22,6 +22,12 @@ cleanup() {
 trap cleanup INT TERM EXIT
 
 require_file "$PROJECT_DIR/.env"
+set -a
+# shellcheck disable=SC1091
+. "$PROJECT_DIR/.env"
+set +a
+BACKEND_PORT="${BACKEND_PORT:-${PORT:-3001}}"
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 require_dir "$PROJECT_DIR/server/node_modules"
 require_dir "$PROJECT_DIR/client/node_modules"
 port_free "$BACKEND_PORT"
@@ -29,7 +35,7 @@ port_free "$FRONTEND_PORT"
 
 (cd "$PROJECT_DIR/server" && PORT="$BACKEND_PORT" node index.js) &
 CHILD_PIDS+=("$!")
-(cd "$PROJECT_DIR/client" && PORT="$FRONTEND_PORT" BROWSER=none npm start) &
+(cd "$PROJECT_DIR/client" && PORT="$FRONTEND_PORT" BROWSER=none ./node_modules/.bin/react-scripts start) &
 CHILD_PIDS+=("$!")
 
 echo "Localization services started without installing, seeding, migrating, or reclaiming ports."
