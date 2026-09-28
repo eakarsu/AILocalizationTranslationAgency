@@ -63,7 +63,7 @@ CHILD_PIDS=()
 require_file() { [ -f "$1" ] || { echo "Missing required file: $1" >&2; exit 1; }; }
 require_dir() { [ -d "$1" ] || { echo "Missing dependencies: $1 (install explicitly before startup)" >&2; exit 1; }; }
 port_free() {
-  if command -v lsof >/dev/null 2>&1 && lsof -ti ":$1" >/dev/null 2>&1; then
+  if command -v lsof >/dev/null 2>&1 && lsof -tiTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; then
     echo "Port $1 is already in use; refusing to terminate another process." >&2
     exit 1
   fi
@@ -86,6 +86,10 @@ require_dir "$PROJECT_DIR/server/node_modules"
 require_dir "$PROJECT_DIR/client/node_modules"
 port_free "$BACKEND_PORT"
 port_free "$FRONTEND_PORT"
+
+if [ "${NODE_ENV:-development}" != production ] && [ "${ENABLE_DEMO_CREDENTIAL_AUTOFILL:-true}" = true ]; then
+  node "$PROJECT_DIR/server/scripts/provision-demo-credentials.js"
+fi
 
 (cd "$PROJECT_DIR/server" && PORT="$BACKEND_PORT" node index.js) &
 CHILD_PIDS+=("$!")
