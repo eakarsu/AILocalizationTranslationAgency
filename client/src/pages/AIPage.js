@@ -1,9 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import ReadableAIReport from "./AIResultView";
+import AIFieldPresets, { completeExample } from './AIFieldPresets';
+import AIResultView from './AIResultView';
+import useCancelableAI from './useCancelableAI';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import samples from './aiSamples';
 
 // Dropdown sources mapped to API endpoints
 const dropdownSources = {
+  projectIdSelect: { endpoint: '/projects', labelFn: (row) => row.name + ' · #' + row.id, valueField: 'id' },
   clientSelect: { endpoint: '/clients', labelField: 'name', valueField: 'name', extraFields: ['company', 'country', 'industry'] },
   projectSelect: { endpoint: '/projects', labelField: 'name', valueField: 'name', extraFields: ['source_language', 'target_languages', 'status'] },
   translatorSelect: { endpoint: '/translators', labelField: 'name', valueField: 'name', extraFields: ['languages', 'specializations', 'rate_per_word'] },
@@ -840,7 +845,7 @@ const configs = {
             ))}
           </div>
         )}
-        {r.formattedOutput && <div className="ai-result-section"><h4>Formatted Output</h4><pre style={{whiteSpace: 'pre-wrap', fontSize: 13, color: '#cbd5e1'}}>{r.formattedOutput}</pre></div>}
+        {r.formattedOutput && <div className="ai-result-section"><h4>Formatted Output</h4><ReadableAIReport result={r.formattedOutput} /></div>}
       </>
     ),
   },
@@ -1421,7 +1426,7 @@ const configs = {
     desc: 'Generate accurate pricing quotes for translation projects using AI',
     endpoint: '/ai/generate-quote',
     fields: [
-      { name: 'projectId', label: 'Project ID', type: 'number', required: true },
+      { name: 'projectId', label: 'Project ID', type: 'number', required: true, dropdownSource: 'projectIdSelect', requiresExistingRecord: true },
     ],
     renderResult: (r) => (
       <>
@@ -1479,82 +1484,64 @@ const configs = {
 export default function AIPage({ type }) {
   const config = configs[type];
   const [formData, setFormData] = useState({});
-  const [result, setResult] = useState(null);
+  const aiRequest = useCancelableAI();
+  const { result, setResult: setResult, loading, error, setError: setError } = aiRequest;
   const [resultMeta, setResultMeta] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+
   const [dropdownData, setDropdownData] = useState({});
+  const [dropdownLoading, setDropdownLoading] = useState(false);
+  const [dropdownError, setDropdownError] = useState('');
+  const sourceRequest = useRef(null);
   const [activeSample, setActiveSample] = useState(null);
 
   const currentSamples = samples[type] || [];
 
   // Fetch dropdown data for fields that have dropdownSource
   const fetchDropdowns = useCallback(async () => {
-    const sourcesNeeded = new Set();
-    config.fields.forEach(f => {
-      if (f.dropdownSource) sourcesNeeded.add(f.dropdownSource);
-    });
-
-    const fetched = {};
+    sourceRequest.current?.abort();
+    const controller = new AbortController(); sourceRequest.current = controller;
+    setDropdownLoading(true); setDropdownError('');
+    const sourcesNeeded = new Set(config.fields.map(field => field.dropdownSource).filter(Boolean)), fetched = {}, errors = [];
     for (const src of sourcesNeeded) {
-      const def = dropdownSources[src];
-      if (!def) continue;
+      const def = dropdownSources[src]; if (!def) continue;
       try {
-        const { data } = await api.get(def.endpoint);
-        let options = data.map(row => ({
-          label: def.labelFn ? def.labelFn(row) : row[def.labelField],
-          value: String(row[def.valueField]),
-          extra: def.extraFields ? def.extraFields.map(ef => row[ef]).filter(Boolean).join(' | ') : '',
+        const { data } = await api.get(def.endpoint, { signal: controller.signal });
+        const rows = Array.isArray(data) ? data : data?.data;
+        if (!Array.isArray(rows) || rows.some(row => !row || typeof row !== 'object')) throw new Error('The native source list returned an unexpected response.');
+        let options = rows.filter(row => row[def.valueField] !== undefined && row[def.valueField] !== null && String(row[def.valueField]).trim()).map(row => ({
+          label: def.labelFn ? def.labelFn(row) : row[def.labelField], value: String(row[def.valueField]),
+          extra: def.extraFields ? def.extraFields.map(field => row[field]).filter(Boolean).join(' | ') : '',
         }));
-        if (def.unique) {
-          const seen = new Set();
-          options = options.filter(o => {
-            if (!o.value || seen.has(o.value)) return false;
-            seen.add(o.value);
-            return true;
-          });
-        }
+        if (src === 'projectIdSelect' && options.some(option => !Number.isInteger(Number(option.value)) || Number(option.value) <= 0)) throw new Error('The native project list returned an invalid reference.');
+        if (def.unique) { const seen = new Set(); options = options.filter(option => !seen.has(option.value) && seen.add(option.value)); }
         fetched[src] = options;
-      } catch (err) {
-        fetched[src] = [];
+      } catch (failure) {
+        if (controller.signal.aborted) return;
+        fetched[src] = []; errors.push(def.endpoint + ': ' + (failure.response?.data?.message || failure.response?.data?.error || failure.message || 'Could not load saved sources.'));
       }
     }
-    setDropdownData(fetched);
+    if (controller.signal.aborted || sourceRequest.current !== controller) return;
+    setDropdownData(fetched); setDropdownError(errors.join(' ')); setDropdownLoading(false); sourceRequest.current = null;
   }, [config.fields]);
 
   useEffect(() => {
+    aiRequest.cancel();
     fetchDropdowns();
     setFormData({});
     setResult(null);
     setResultMeta({});
     setError('');
     setActiveSample(null);
+    return () => sourceRequest.current?.abort();
   }, [type, fetchDropdowns]);
 
-  const loadSample = (idx) => {
-    const sample = currentSamples[idx];
-    if (sample) {
-      setFormData({ ...sample.data });
-      setActiveSample(idx);
-      setResult(null);
-      setError('');
-    }
-  };
+  const availableFields = config.fields.map(field => ({ ...field, type: dropdownData[field.dropdownSource]?.length ? 'select' : field.type, options: dropdownData[field.dropdownSource]?.length ? dropdownData[field.dropdownSource] : field.options }));
+  const missingSource = availableFields.some(field => field.required && field.requiresExistingRecord && (!formData[field.name] || !(field.options || []).some(option => String(option.value ?? option) === String(formData[field.name]))));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setResult(null);
-    try {
-      const { data } = await api.post(config.endpoint, formData);
-      setResult(data.result);
-      setResultMeta({ glossaryApplied: data.glossaryApplied });
-    } catch (err) {
-      setError(err.response?.data?.error || 'AI request failed. Check your OpenRouter API key.');
-    }
-    setLoading(false);
-  };
+  const loadSample = (index) => { const sample = currentSamples[index]; setFormData(completeExample(config.fields.map((field) => ({ ...field, type: dropdownData[field.dropdownSource]?.length ? 'select' : field.type, options: dropdownData[field.dropdownSource]?.length ? dropdownData[field.dropdownSource] : field.options })), sample || {}, index, config.title, formData)); setActiveSample(index); setResult(null); setError(''); };
+
+  const handleSubmit = async (event) => { event?.preventDefault?.(); if (missingSource || dropdownLoading) return; return aiRequest.run(async (options) => { const { data } = await api.post(config.endpoint, formData, options); if (!options.signal.aborted) setResultMeta({ glossaryApplied: data.glossaryApplied }); return data; }); };
 
   const renderField = (f) => {
     const ddOptions = f.dropdownSource ? dropdownData[f.dropdownSource] : null;
@@ -1617,24 +1604,16 @@ export default function AIPage({ type }) {
       </div>
 
       {/* Sample Data Buttons */}
-      {currentSamples.length > 0 && (
-        <div className="sample-buttons">
-          <span className="sample-label">Load Sample:</span>
-          {currentSamples.map((sample, idx) => (
-            <button
-              key={idx}
-              className={`sample-btn ${activeSample === idx ? 'sample-active' : ''}`}
-              onClick={() => loadSample(idx)}
-              type="button"
-            >
-              {sample.label}
-            </button>
-          ))}
-        </div>
-      )}
+
 
       <div className="ai-form">
         <form onSubmit={handleSubmit}>
+          <AIFieldPresets fields={availableFields} samples={currentSamples} context={config.title} disabled={loading} onFill={(sample, index) => { setFormData(completeExample(config.fields.map((field) => ({ ...field, type: dropdownData[field.dropdownSource]?.length ? 'select' : field.type, options: dropdownData[field.dropdownSource]?.length ? dropdownData[field.dropdownSource] : field.options })), sample, index, config.title, formData)); aiRequest.setResult(null); aiRequest.setError(null); }} />
+          {dropdownLoading && <p role="status">Loading saved source options…</p>}
+          {dropdownError && <div role="alert">{dropdownError} <button type="button" className="btn btn-secondary" onClick={fetchDropdowns}>Retry saved sources</button></div>}
+          {missingSource && <p role="status">Choose an actual loaded project before generating. Examples never invent a project reference.</p>}
+          {aiRequest.notice && <div className="sr-notice" role="status">{aiRequest.notice}</div>}
+
           {config.fields.map(f => (
             <div key={f.name} className="form-group">
               <label>
@@ -1646,9 +1625,10 @@ export default function AIPage({ type }) {
               {renderField(f)}
             </div>
           ))}
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{marginTop: 8}}>
+          <button type="submit" className="btn btn-primary" disabled={loading || dropdownLoading || missingSource} style={{marginTop: 8}}>
             {loading ? 'Processing with AI...' : `Run ${config.title}`}
           </button>
+          {loading && <button type="button" className="btn btn-secondary" onClick={aiRequest.cancel}>Cancel</button>}
         </form>
       </div>
 
@@ -1665,23 +1645,7 @@ export default function AIPage({ type }) {
         </div>
       )}
 
-      {result && !loading && (
-        <div className="ai-result">
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
-            <h3 style={{margin: 0}}>AI Analysis Results</h3>
-            {resultMeta.glossaryApplied && (
-              <span style={{
-                background: 'rgba(99, 102, 241, 0.2)', color: '#818cf8',
-                border: '1px solid rgba(99, 102, 241, 0.4)',
-                borderRadius: 12, padding: '3px 10px', fontSize: 12, fontWeight: 600
-              }}>
-                📚 Glossary terms applied
-              </span>
-            )}
-          </div>
-          {config.renderResult(result)}
-        </div>
-      )}
+      <AIResultView result={result} loading={loading} error={error} title={config.title} />
     </div>
   );
 }

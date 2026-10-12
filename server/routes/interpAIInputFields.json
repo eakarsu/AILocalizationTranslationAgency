@@ -1,0 +1,647 @@
+{
+  "/interp/compliance-logging": {
+    "classify-phi-pii-content": [
+      "phrase_text"
+    ],
+    "redact-phi-in-log": [
+      "phrase_text"
+    ],
+    "detect-hipaa-violation": [
+      "event_type",
+      "phi_pii_detected",
+      "disclosure_type"
+    ],
+    "predict-audit-finding": [
+      "event_type",
+      "phi_pii_detected",
+      "hipaa_violation"
+    ],
+    "recommend-retention-policy": [
+      "event_type",
+      "phi_pii_detected",
+      "disclosure_type"
+    ],
+    "generate-compliance-report": [
+      "session_id",
+      "event_type",
+      "phrase_text",
+      "phi_pii_detected",
+      "hipaa_violation",
+      "tamper_detected",
+      "disclosure_type",
+      "retention_policy",
+      "encryption_verified",
+      "compliance_score",
+      "breach_risk",
+      "audit_meta",
+      "phi_count",
+      "violation_count"
+    ],
+    "summarize-access-events": [
+      "session_id",
+      "audit_meta"
+    ],
+    "score-log-completeness": [
+      "event_type",
+      "phrase_text",
+      "disclosure_type",
+      "phi_pii_detected",
+      "hipaa_violation",
+      "audit_meta",
+      "tamper_detected",
+      "retention_policy",
+      "encryption_verified",
+      "compliance_score",
+      "breach_risk",
+      "phi_count",
+      "violation_count"
+    ],
+    "validate-encryption-at-rest": [
+      "encryption_verified",
+      "phi_pii_detected"
+    ],
+    "suggest-additional-audit-field": [
+      "event_type"
+    ],
+    "detect-tamper-attempt": [
+      "id",
+      "log_id",
+      "audit_meta"
+    ],
+    "recommend-baa-coverage": [
+      "event_type",
+      "phi_pii_detected",
+      "disclosure_type"
+    ],
+    "classify-disclosure-type": [
+      "event_type",
+      "audit_meta"
+    ],
+    "predict-breach-impact": [
+      "phi_pii_detected",
+      "breach_risk",
+      "session_id"
+    ],
+    "generate-breach-notification-draft": [
+      "session_id",
+      "event_type",
+      "phrase_text",
+      "phi_pii_detected",
+      "hipaa_violation",
+      "tamper_detected",
+      "disclosure_type",
+      "retention_policy",
+      "encryption_verified",
+      "compliance_score",
+      "breach_risk",
+      "audit_meta",
+      "phi_count",
+      "violation_count"
+    ],
+    "score-compliance-posture": [
+      "phi_count",
+      "violation_count",
+      "compliance_score"
+    ]
+  },
+  "/interp/dialect-adaptation": {
+    "detect-dialect": [
+      "text",
+      "sample",
+      "language_code"
+    ],
+    "suggest-dialect-model": [
+      "language_code",
+      "detected_dialect",
+      "region_tag"
+    ],
+    "classify-formality-level": [
+      "text",
+      "sample",
+      "language_code",
+      "detected_dialect"
+    ],
+    "predict-comprehension-mismatch": [
+      "detected_dialect",
+      "language_code"
+    ],
+    "recommend-dialect-switch": [
+      "detected_dialect",
+      "recognition_score"
+    ],
+    "generate-dialect-adaptation-rule": [
+      "detected_dialect",
+      "language_code",
+      "formality_level"
+    ],
+    "summarize-dialect-usage": [
+      "session_id",
+      "detected_dialect",
+      "language_code",
+      "recognition_score"
+    ],
+    "score-dialect-recognition": [
+      "recognition_score",
+      "detected_dialect",
+      "language_code"
+    ],
+    "validate-region-tagging": [
+      "region_tag",
+      "detected_dialect",
+      "language_code"
+    ],
+    "suggest-style-adjustment": [
+      "detected_dialect",
+      "language_code",
+      "formality_level"
+    ],
+    "detect-code-switching": [
+      "text",
+      "sample",
+      "language_code"
+    ],
+    "recommend-bilingual-handling": [
+      "language_code",
+      "code_switching_detected"
+    ],
+    "classify-sociolect": [
+      "text",
+      "sample",
+      "language_code"
+    ],
+    "predict-listener-confusion": [
+      "detected_dialect",
+      "dialect_meta"
+    ],
+    "generate-dialect-doc": [
+      "detected_dialect",
+      "language_code",
+      "region_tag"
+    ],
+    "suggest-prosody-adjust": [
+      "detected_dialect",
+      "language_code"
+    ]
+  },
+  "/interp/legal-glossary-pack": {
+    "detect-untranslatable-legal-term": [
+      "term",
+      "source_text",
+      "language_pair",
+      "jurisdiction"
+    ],
+    "suggest-jurisdiction-match": [
+      "term",
+      "language_pair",
+      "legal_area"
+    ],
+    "classify-doctrine-vs-procedural": [
+      "term"
+    ],
+    "predict-legal-meaning-shift": [
+      "term",
+      "language_pair"
+    ],
+    "recommend-glossary-addition": [
+      "name",
+      "legal_area",
+      "jurisdiction",
+      "language_pair"
+    ],
+    "generate-back-translation-test": [
+      "term",
+      "language_pair"
+    ],
+    "summarize-glossary-usage": [
+      "name",
+      "coverage_score",
+      "quality_score"
+    ],
+    "score-glossary-quality": [
+      "name",
+      "coverage_score",
+      "jurisdiction"
+    ],
+    "validate-legal-equivalence": [
+      "source_term",
+      "target_term",
+      "language_pair",
+      "jurisdiction"
+    ],
+    "suggest-cross-jurisdiction-term": [
+      "term",
+      "jurisdiction",
+      "legal_area",
+      "language_pair"
+    ],
+    "detect-faux-ami": [
+      "language_pair",
+      "term"
+    ],
+    "recommend-loanword-strategy": [
+      "term",
+      "language_pair",
+      "jurisdiction"
+    ],
+    "classify-legal-area": [
+      "term",
+      "jurisdiction"
+    ],
+    "predict-misinterpretation-risk": [
+      "term",
+      "language_pair",
+      "jurisdiction"
+    ],
+    "generate-glossary-doc": [
+      "name",
+      "legal_area",
+      "jurisdiction",
+      "language_pair"
+    ],
+    "suggest-glossary-versioning": [
+      "name",
+      "jurisdiction",
+      "language_pair"
+    ]
+  },
+  "/interp/medical-glossary-pack": {
+    "detect-untranslatable-medical-term": [
+      "term",
+      "source_text",
+      "language_pair"
+    ],
+    "suggest-icd-snomed-mapping": [
+      "term",
+      "specialty_domain",
+      "language"
+    ],
+    "classify-term-acuity": [
+      "term"
+    ],
+    "predict-glossary-coverage-gap": [
+      "name",
+      "specialty_domain",
+      "language_pair",
+      "coverage_score"
+    ],
+    "recommend-glossary-addition": [
+      "specialty_domain",
+      "language_pair"
+    ],
+    "generate-back-translation-test": [
+      "term",
+      "language_pair"
+    ],
+    "summarize-glossary-usage": [
+      "name",
+      "coverage_score",
+      "quality_score",
+      "specialty_domain"
+    ],
+    "score-glossary-quality": [
+      "name",
+      "terms",
+      "coverage_score"
+    ],
+    "validate-medical-equivalence": [
+      "source_term",
+      "target_term",
+      "language_pair"
+    ],
+    "suggest-cross-lang-term": [
+      "term",
+      "specialty_domain",
+      "language_pair"
+    ],
+    "detect-false-cognate": [
+      "language_pair",
+      "term"
+    ],
+    "recommend-prefer-loanword-vs-translation": [
+      "term",
+      "language_pair",
+      "specialty_domain"
+    ],
+    "classify-specialty-domain": [
+      "term"
+    ],
+    "predict-translation-confusion": [
+      "term",
+      "language_pair"
+    ],
+    "generate-glossary-doc": [
+      "name",
+      "specialty_domain",
+      "language_pair"
+    ],
+    "suggest-glossary-merge": [
+      "name",
+      "specialty_domain",
+      "language_pair"
+    ]
+  },
+  "/interp/speaker-diarization": {
+    "classify-speaker": [
+      "text",
+      "segment",
+      "diarization_meta"
+    ],
+    "detect-new-speaker": [
+      "text",
+      "segment",
+      "num_speakers"
+    ],
+    "predict-speaker-turn": [
+      "num_speakers",
+      "turn_distribution"
+    ],
+    "recommend-mic-config": [
+      "num_speakers",
+      "mic_config"
+    ],
+    "score-diarization-accuracy": [
+      "num_speakers",
+      "accuracy_score",
+      "crosstalk_detected"
+    ],
+    "generate-speaker-labels": [
+      "num_speakers",
+      "diarization_meta"
+    ],
+    "summarize-turn-distribution": [
+      "num_speakers",
+      "turn_distribution"
+    ],
+    "validate-speaker-count": [
+      "num_speakers",
+      "mic_config"
+    ],
+    "suggest-overlap-handling": [
+      "crosstalk_detected",
+      "num_speakers"
+    ],
+    "detect-crosstalk": [
+      "num_speakers",
+      "mic_config"
+    ],
+    "recommend-channel-split": [
+      "num_speakers",
+      "mic_config",
+      "crosstalk_detected"
+    ],
+    "classify-speaker-role": [
+      "num_speakers",
+      "diarization_meta"
+    ],
+    "predict-speaker-id-confidence": [
+      "num_speakers",
+      "accuracy_score",
+      "crosstalk_detected"
+    ],
+    "generate-diarization-doc": [
+      "session_id",
+      "num_speakers",
+      "accuracy_score",
+      "mic_config"
+    ],
+    "suggest-min-segment-duration": [
+      "num_speakers",
+      "mic_config",
+      "min_segment_duration_ms"
+    ],
+    "detect-impostor-speaker": [
+      "num_speakers",
+      "speaker_labels"
+    ]
+  },
+  "/interp/streaming-asr": {
+    "classify-audio-quality": [
+      "audio_format",
+      "sample_rate",
+      "noise_level"
+    ],
+    "suggest-language-detected": [
+      "partial_transcript",
+      "language_code"
+    ],
+    "predict-recognition-accuracy": [
+      "language_code",
+      "audio_format",
+      "noise_level"
+    ],
+    "detect-noise-source": [
+      "noise_level",
+      "session_meta"
+    ],
+    "recommend-noise-reduction": [
+      "noise_source",
+      "language_code"
+    ],
+    "generate-vad-segments": [
+      "partial_transcript",
+      "final_transcript"
+    ],
+    "summarize-asr-session": [
+      "final_transcript",
+      "language_code",
+      "session_meta"
+    ],
+    "score-asr-confidence": [
+      "final_transcript",
+      "confidence_score"
+    ],
+    "validate-audio-format": [
+      "audio_format"
+    ],
+    "suggest-sample-rate-change": [
+      "sample_rate",
+      "language_code"
+    ],
+    "detect-overlapping-speech": [
+      "partial_transcript",
+      "final_transcript"
+    ],
+    "recommend-domain-model": [
+      "language_code",
+      "session_meta"
+    ],
+    "classify-speaker-accent": [
+      "partial_transcript",
+      "final_transcript",
+      "language_code"
+    ],
+    "predict-rebuffer-need": [
+      "audio_format",
+      "sample_rate",
+      "noise_level"
+    ],
+    "generate-asr-corrections": [
+      "final_transcript",
+      "language_code"
+    ],
+    "suggest-restart-stream": [
+      "status",
+      "confidence_score",
+      "noise_level"
+    ]
+  },
+  "/interp/streaming-mt": {
+    "classify-domain": [
+      "source_text",
+      "source_lang",
+      "target_lang"
+    ],
+    "suggest-glossary-pack": [
+      "domain",
+      "source_lang",
+      "target_lang"
+    ],
+    "predict-translation-quality": [
+      "source_text",
+      "domain",
+      "source_lang",
+      "target_lang"
+    ],
+    "detect-untranslatable-segment": [
+      "source_text",
+      "source_lang"
+    ],
+    "recommend-context-window": [
+      "domain",
+      "source_lang",
+      "target_lang"
+    ],
+    "generate-mt-correction": [
+      "source_text",
+      "translated_text",
+      "source_lang",
+      "target_lang"
+    ],
+    "summarize-mt-session": [
+      "session_id",
+      "source_lang",
+      "target_lang",
+      "source_text",
+      "translated_text",
+      "domain",
+      "quality_score",
+      "latency_ms",
+      "mt_meta"
+    ],
+    "score-mt-confidence": [
+      "source_text",
+      "translated_text"
+    ],
+    "validate-language-pair": [
+      "source_lang",
+      "target_lang"
+    ],
+    "suggest-formal-vs-informal": [
+      "target_lang",
+      "domain",
+      "mt_meta"
+    ],
+    "detect-named-entity-issue": [
+      "source_text",
+      "translated_text"
+    ],
+    "recommend-back-translation": [
+      "domain",
+      "quality_score"
+    ],
+    "classify-mt-error-type": [
+      "source_text",
+      "translated_text"
+    ],
+    "predict-latency-spike": [
+      "domain",
+      "source_text",
+      "latency_ms"
+    ],
+    "generate-post-edit-suggestion": [
+      "source_text",
+      "translated_text",
+      "domain"
+    ],
+    "suggest-segment-retry": [
+      "quality_score",
+      "error_type",
+      "latency_ms"
+    ]
+  },
+  "/interp/streaming-tts": {
+    "classify-voice-style": [
+      "language_code",
+      "tts_meta"
+    ],
+    "suggest-voice-match": [
+      "language_code",
+      "voice_style",
+      "text_input"
+    ],
+    "predict-naturalness-score": [
+      "text_input",
+      "voice_id",
+      "language_code"
+    ],
+    "detect-mispronunciation": [
+      "text_input",
+      "language_code"
+    ],
+    "recommend-prosody-adjust": [
+      "text_input",
+      "language_code",
+      "voice_id"
+    ],
+    "generate-ssml": [
+      "text_input",
+      "language_code",
+      "prosody_settings"
+    ],
+    "summarize-tts-session": [
+      "voice_id",
+      "language_code",
+      "naturalness_score",
+      "quality_score"
+    ],
+    "score-tts-quality": [
+      "naturalness_score",
+      "voice_id",
+      "language_code"
+    ],
+    "validate-text-segment-length": [
+      "text_input",
+      "language_code"
+    ],
+    "suggest-pause-insertion": [
+      "text_input"
+    ],
+    "detect-foreign-word": [
+      "text_input",
+      "language_code"
+    ],
+    "recommend-phoneme-override": [
+      "language_code",
+      "text_input"
+    ],
+    "classify-emotion-needed": [
+      "text_input",
+      "tts_meta"
+    ],
+    "predict-listener-fatigue": [
+      "voice_id",
+      "text_input",
+      "naturalness_score"
+    ],
+    "generate-tts-script-cleanup": [
+      "text_input",
+      "language_code"
+    ],
+    "suggest-voice-swap": [
+      "voice_id",
+      "quality_score",
+      "language_code",
+      "voice_style"
+    ]
+  }
+}

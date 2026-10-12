@@ -1,3 +1,4 @@
+import ReadableAIReport from "./AIResultView";
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
@@ -91,13 +92,7 @@ export default function AIHistory() {
                   </div>
                   <div style={{ marginTop: 12 }}>
                     <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>RESULT</div>
-                    <pre style={{
-                      background: '#0f172a', padding: 12, borderRadius: 6, fontSize: 12,
-                      color: '#4ade80', overflow: 'auto', maxHeight: 300,
-                      whiteSpace: 'pre-wrap', wordBreak: 'break-word'
-                    }}>
-                      {JSON.stringify(item.result, null, 2)}
-                    </pre>
+                    <ReadableAIReport result={item.result} />
                   </div>
                 </div>
               )}

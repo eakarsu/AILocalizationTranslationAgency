@@ -93,7 +93,7 @@ fi
 
 (cd "$PROJECT_DIR/server" && PORT="$BACKEND_PORT" node index.js) &
 CHILD_PIDS+=("$!")
-(cd "$PROJECT_DIR/client" && PORT="$FRONTEND_PORT" BROWSER=none ./node_modules/.bin/react-scripts start) &
+(cd "$PROJECT_DIR/client" && REACT_APP_API_URL="${REACT_APP_API_URL:-http://127.0.0.1:$BACKEND_PORT}" PORT="$FRONTEND_PORT" BROWSER=none ./node_modules/.bin/react-scripts start) &
 CHILD_PIDS+=("$!")
 
 echo "Localization services started without installing, seeding, migrating, or reclaiming ports."

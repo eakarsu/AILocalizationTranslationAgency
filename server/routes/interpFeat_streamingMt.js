@@ -7,13 +7,15 @@ const router = express.Router();
 const { ensureInterpTables } = require('../models/interpretation');
 const TABLE = 'interp_mt_segments';
 
-async function callAI(prompt, systemNote) {
+async function callAI(prompt, systemNote, signal) {
+  signal?.throwIfAborted();
   const fetch = require('node-fetch');
   const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) return { stub: true, message: 'No OPENROUTER_API_KEY configured', echo: prompt.slice(0, 200) };
   try {
     const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
@@ -26,7 +28,10 @@ async function callAI(prompt, systemNote) {
     });
     if (!r.ok) { const t = await r.text(); return { error: true, status: r.status, body: t.slice(0, 500) }; }
     const data = await r.json();
-    return { output: data?.choices?.[0]?.message?.content || JSON.stringify(data), model: data?.model };
+    signal?.throwIfAborted();
+    const choice = data?.choices?.[0];
+    if (choice?.message?.refusal || ['length', 'content_filter'].includes(choice?.finish_reason) || typeof choice?.message?.content !== 'string' || !choice.message.content.trim()) return { error: true, message: 'The native provider did not return a complete response.' };
+    return { output: choice.message.content, model: data?.model };
   } catch (e) { return { error: true, message: e.message }; }
 }
 
@@ -241,12 +246,20 @@ const AI_VERBS = [
   { verb: 'suggest-segment-retry', prompt: (b) => `Should this MT segment be retried? Quality: ${b.quality_score}, error_type: "${b.error_type}", latency: ${b.latency_ms}ms. Return: retry_recommended (bool), reason, retry_strategy.` }
 ];
 
+const nativeInputFields = require('./interpAIInputFields.json')["/interp/streaming-mt"];
 AI_VERBS.forEach(({ verb, prompt }) => {
   router.post(`/ai/${verb}`, async (req, res) => {
+    const controller = new AbortController(), cancel = () => { if (!res.writableEnded) controller.abort(); };
+    req.once('aborted', cancel); res.once('close', cancel); if (req.aborted || res.destroyed) controller.abort();
     try {
-      const result = await callAI(prompt(req.body), `Task: ${verb}`);
+      controller.signal.throwIfAborted();
+      const inputs = Object.fromEntries((nativeInputFields[verb] || []).filter(key => req.body?.[key] !== undefined).map(key => [key, req.body[key]]));
+      const context = '\n\nSupplied native advisory inputs (unverified; do not infer consent, legal or clinical approval, actual recordings or completed actions): ' + JSON.stringify(inputs);
+      const result = await callAI(prompt(inputs) + context, `Task: ${verb}`, controller.signal);
+      controller.signal.throwIfAborted();
       res.json({ verb, result, generatedAt: new Date().toISOString() });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { if (!controller.signal.aborted && !res.destroyed) res.status(500).json({ error: e.message }); }
+    finally { req.off('aborted', cancel); res.off('close', cancel); }
   });
 });
 

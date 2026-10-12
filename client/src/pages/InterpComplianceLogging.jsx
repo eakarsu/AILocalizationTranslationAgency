@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import InterpretationAIWorkspace from '../components/InterpretationAIWorkspace';
+import interpretationAISchemas from '../components/interpretationAISchemas';
 
 const ENDPOINT = '/interp/compliance-logging';
 const TITLE = 'Compliance Logging';
@@ -18,66 +20,8 @@ const FIELDS = [
   { name: 'remediation_notes', label: 'Remediation Notes', type: 'textarea' },
 ];
 
-const AI_VERBS = [
-  'classify-compliance-event',
-  'assess-violation-severity',
-  'recommend-remediation',
-  'detect-gdpr-issues',
-  'detect-hipaa-issues',
-  'flag-pii-in-transcript',
-  'score-compliance-risk',
-  'generate-audit-report',
-  'suggest-data-retention-policy',
-  'detect-consent-violations',
-  'classify-regulation-type',
-  'predict-compliance-outcome',
-  'generate-remediation-plan',
-  'detect-cross-border-issues',
-  'assess-data-sensitivity',
-  'recommend-encryption-level',
-];
-
-function AIVerbsPanel({ item, onClose }) {
-  const [selectedVerb, setSelectedVerb] = useState(AI_VERBS[0]);
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const runVerb = async () => {
-    setLoading(true); setResult(null); setError(null);
-    try {
-      const { data } = await api.post(`${ENDPOINT}/ai/${selectedVerb}`, item || {});
-      setResult(data);
-    } catch (e) { setError(e.response?.data?.error || e.message); }
-    setLoading(false);
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>&times;</button>
-        <h2>AI Verbs — {TITLE}</h2>
-        <div className="form-group">
-          <label>Select AI Verb</label>
-          <select value={selectedVerb} onChange={e => setSelectedVerb(e.target.value)}>
-            {AI_VERBS.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
-        <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>
-          <button className="btn btn-primary" style={{ width: 'auto' }} onClick={runVerb} disabled={loading}>{loading ? 'Running...' : 'Run Verb'}</button>
-        </div>
-        {error && <div style={{ marginTop: 12, padding: 12, background: '#fee2e2', borderRadius: 6, color: '#b91c1c' }}>{error}</div>}
-        {result && (
-          <div style={{ marginTop: 12, padding: 12, background: '#f0fdf4', borderRadius: 6 }}>
-            <strong>Verb:</strong> {result.verb}<br /><strong>Generated At:</strong> {result.generatedAt}<br />
-            <pre style={{ marginTop: 8, whiteSpace: 'pre-wrap', fontSize: 13, color: '#1e293b' }}>
-              {typeof result.result === 'object' ? JSON.stringify(result.result, null, 2) : String(result.result)}
-            </pre>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+function AIVerbsPanel({ item, rows, available, unavailableReason, retry, onClose }) {
+  return <InterpretationAIWorkspace title={TITLE} endpoint={ENDPOINT} tools={interpretationAISchemas[ENDPOINT]} item={item} rows={rows} available={available} unavailableReason={unavailableReason} retry={retry} onClose={onClose} />;
 }
 
 export default function InterpComplianceLogging() {
@@ -87,18 +31,19 @@ export default function InterpComplianceLogging() {
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [showAI, setShowAI] = useState(false);
   const [aiTarget, setAiTarget] = useState(null);
 
   const fetchItems = useCallback(async (p = 1) => {
-    setLoading(true);
+    setLoading(true); setLoadError('');
     try {
       const { data } = await api.get(`${ENDPOINT}?page=${p}&limit=20`);
-      if (data && data.data && data.pagination) { setItems(data.data); setPagination(data.pagination); }
-      else setItems(Array.isArray(data) ? data : []);
-    } catch (e) { console.error(e); }
+      if (data && data.data && data.pagination) { if (!Array.isArray(data.data)) throw new Error('The native interpretation list returned an unexpected response.'); setItems(data.data); setPagination(data.pagination); }
+      else { if (!Array.isArray(data)) throw new Error('The native interpretation list returned an unexpected response.'); setItems(data); setPagination(null); }
+    } catch (e) { setLoadError(e.response?.data?.message || e.response?.data?.error || e.message || 'Could not load native interpretation sources.'); }
     setLoading(false);
   }, []);
 
@@ -106,7 +51,7 @@ export default function InterpComplianceLogging() {
 
   const openNew = () => { setFormData({}); setEditing(null); setShowForm(true); };
   const openEdit = (item) => {
-    const d = {}; FIELDS.forEach(f => { d[f.name] = item[f.name] || ''; });
+    const d = {}; FIELDS.forEach(f => { d[f.name] = item[f.name] ?? ''; });
     setFormData(d); setEditing(item); setShowForm(true); setSelected(null);
   };
   const handleSubmit = async (e) => {
@@ -134,6 +79,7 @@ export default function InterpComplianceLogging() {
           <button className="btn btn-primary" style={{ width: 'auto' }} onClick={openNew}>+ New Log Entry</button>
         </div>
       </div>
+      {loadError && <div role="alert">{loadError} <button type="button" className="btn btn-secondary" onClick={() => fetchItems(page)}>Retry native sources</button></div>}
       <div className="table-container"><div className="table-wrapper">
         {loading ? <div className="loading-spinner"><div className="spinner" /> Loading...</div> : (
           <table>
@@ -211,7 +157,7 @@ export default function InterpComplianceLogging() {
           </div>
         </div>
       )}
-      {showAI && <AIVerbsPanel item={aiTarget} onClose={() => setShowAI(false)} />}
+      {showAI && <AIVerbsPanel item={aiTarget} rows={items} available={!loading && !loadError} unavailableReason={loadError} retry={() => fetchItems(page)} onClose={() => setShowAI(false)} />}
     </div>
   );
 }

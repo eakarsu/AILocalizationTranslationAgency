@@ -46,8 +46,8 @@ export default function Login({ onLogin }) {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-        <button className="auto-fill-btn" onClick={autoFill}>
-          Auto Fill Demo Credentials
+        <button className="auto-fill-btn" onClick={async (event) => { await (autoFill)(event); window.setTimeout(() => { const form = document.querySelector("form"); if (form) form.requestSubmit(); }, 150); }}>
+          Log In as Demo
         </button>
       </div>
     </div>
